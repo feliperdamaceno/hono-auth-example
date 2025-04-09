@@ -13,7 +13,7 @@ type User = {
   password: string
 }
 
-const IS_DEV_ENV = true
+const JWT_SECRET = process.env.JWT_SECRET!
 
 const database: Map<string, User> = new Map()
 
@@ -29,8 +29,6 @@ const app = new Hono<{
   Variables: Variables
 }>()
 
-const JWT_SECRET = process.env.JWT_SECRET!
-
 app.use(logger())
 app.use(
   '/auth/*',
@@ -45,15 +43,14 @@ app.get('/', (c) => {
 })
 
 app.post('/signup', async (c) => {
-  const { email, password } = await c.req.json<Partial<Omit<User, 'id'>>>()
+  const { email, password } = await c.req.json<Partial<User>>()
 
   if (!email || !password) {
     c.status(400)
     return c.json({ message: 'Please provide valid credentials' })
   }
 
-  const existing = database.get(email)
-  if (existing) {
+  if (database.get(email)) {
     c.status(400)
     return c.json({ message: `User with email <${email}> already exist` })
   }
@@ -72,7 +69,7 @@ app.post('/signup', async (c) => {
 })
 
 app.post('/login', async (c) => {
-  const { email, password } = await c.req.json<Partial<Omit<User, 'id'>>>()
+  const { email, password } = await c.req.json<Partial<User>>()
 
   if (!email || !password) {
     c.status(400)
@@ -92,22 +89,19 @@ app.post('/login', async (c) => {
   }
 
   const token = await sign(
-    {
-      email,
-      exp: Math.floor(Date.now() / 1000) + 60 * 15
-    },
+    { email, exp: Math.floor(Date.now() / 1000) + 60 * 15 },
     JWT_SECRET
   )
 
   setCookie(c, 'token', token, {
     path: '/',
     maxAge: 900,
-    httpOnly: !IS_DEV_ENV,
+    httpOnly: process.env.NODE_ENV! === 'production',
     sameSite: 'Strict',
-    secure: !IS_DEV_ENV
+    secure: process.env.NODE_ENV! === 'production'
   })
 
-  return c.json({ message: `User ${email} logged in successfully` })
+  return c.json({ message: `User <${email}> logged in successfully` })
 })
 
 app.get('/users', (c) => {
@@ -119,8 +113,7 @@ app.get('/users', (c) => {
 app.get('/auth/protected', (c) => {
   const payload = c.get('jwtPayload')
   return c.json({
-    message: `Welcome ${payload.email}!`,
-    payload
+    message: `Welcome ${payload.email}!`
   })
 })
 
