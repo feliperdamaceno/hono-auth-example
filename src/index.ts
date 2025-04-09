@@ -49,13 +49,13 @@ app.post('/signup', async (c) => {
 
   if (!email || !password) {
     c.status(400)
-    return c.json({ message: 'please provide your credentials' })
+    return c.json({ message: 'Please provide valid credentials' })
   }
 
   const existing = database.get(email)
   if (existing) {
     c.status(400)
-    return c.json({ message: `user with email <${email}> already exist` })
+    return c.json({ message: `User with email <${email}> already exist` })
   }
 
   const user = {
@@ -66,7 +66,7 @@ app.post('/signup', async (c) => {
   database.set(email, user)
 
   return c.json({
-    message: 'user created',
+    message: `User <${email}> successfully created`,
     user: user
   })
 })
@@ -76,19 +76,19 @@ app.post('/login', async (c) => {
 
   if (!email || !password) {
     c.status(400)
-    return c.json({ message: 'please provide your credentials' })
+    return c.json({ message: 'Please provide valid credentials' })
   }
 
   const user = database.get(email)
   if (!user) {
     c.status(404)
-    return c.json({ message: `user with email <${email}> not found` })
+    return c.json({ message: `User with email <${email}> has not been found` })
   }
 
   const isValidPassword = await Bun.password.verify(password, user.password)
   if (!isValidPassword) {
     c.status(401)
-    return c.json({ message: 'invalid password' })
+    return c.json({ message: 'Invalid password provided' })
   }
 
   const token = await sign(
@@ -107,7 +107,7 @@ app.post('/login', async (c) => {
     secure: !IS_DEV_ENV
   })
 
-  return c.json({ message: `${email} logged in` })
+  return c.json({ message: `User ${email} logged in successfully` })
 })
 
 app.get('/users', (c) => {
@@ -119,7 +119,7 @@ app.get('/users', (c) => {
 app.get('/auth/protected', (c) => {
   const payload = c.get('jwtPayload')
   return c.json({
-    message: `welcome ${payload.email}`,
+    message: `Welcome ${payload.email}!`,
     payload
   })
 })
